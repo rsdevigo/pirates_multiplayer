@@ -26,11 +26,24 @@ public class PlayerController : NetworkBehaviour
     facingLeft.x = facingLeft.x * -1;
 
   }
-  private void Start()
+
+  public override void OnStartServer()
   {
+    base.OnStartServer();
     rb = GetComponent<Rigidbody2D>();
     animator = GetComponent<Animator>();
-    m_Input = new Input_System();
+ 
+  }
+  public override void OnStartClient()
+  {
+    base.OnStartClient();
+    rb = GetComponent<Rigidbody2D>();
+    if (base.IsClientOnly)
+      rb.isKinematic = true;
+    if (base.IsOwner) {
+      m_Input = new Input_System();
+    }
+      
   }
 
   private void OnEnable()

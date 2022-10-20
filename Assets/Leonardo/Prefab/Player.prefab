@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 9092521943512329519}
   - component: {fileID: 6411233056557689756}
   - component: {fileID: 2513780768710251126}
+  - component: {fileID: 6568536573769236913}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -109,6 +110,7 @@ MonoBehaviour:
   _networkBehaviours:
   - {fileID: 3004355388989004426}
   - {fileID: 7546440108409501025}
+  - {fileID: 6568536573769236913}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   _isNetworked: 1
@@ -304,6 +306,27 @@ CapsuleCollider2D:
   m_Offset: {x: 0.047186732, y: -0.043598175}
   m_Size: {x: 0.4751097, y: 0.76776147}
   m_Direction: 0
+--- !u!114 &6568536573769236913
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1605050881531068758}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8cac635f24954048aad3a6ff9110beb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _componentIndexCache: 2
+  _addedNetworkObject: {fileID: 1909708080948414185}
+  _networkObjectCache: {fileID: 1909708080948414185}
+  IgnoredParameters: []
+  _animator: {fileID: 6411233056557689756}
+  _smoothFloats: 1
+  _synchronizeInterval: 0.1
+  _clientAuthoritative: 0
+  _sendToOwner: 1
 --- !u!1 &3321446226789994877
 GameObject:
   m_ObjectHideFlags: 0
