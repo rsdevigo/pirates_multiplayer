@@ -40,7 +40,11 @@ namespace FishNet.Component.Animating.Editing
             EditorGUILayout.ObjectField("Script:", MonoScript.FromMonoBehaviour(na), typeof(NetworkAnimator), false);
             GUI.enabled = true;
 
-            
+            //PROSTART
+            if (1 == 1)
+                EditorGUILayout.HelpBox(EditingConstants.PRO_ASSETS_UNLOCKED_TEXT, MessageType.None);
+            else
+                //PROEND
 #pragma warning disable CS0162 // Unreachable code detected
                 EditorGUILayout.HelpBox(EditingConstants.PRO_ASSETS_LOCKED_TEXT, MessageType.Warning);
 #pragma warning restore CS0162 // Unreachable code detected
@@ -82,6 +86,7 @@ namespace FishNet.Component.Animating.Editing
         private void DrawParameters(NetworkAnimator na)
         {
             EditorGUILayout.LabelField("* Synchronized Parameters", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("This setting allows you to optionally completely prevent the synchronization of certain parameters. Both Fish-Networking free and Pro will only synchronize changes as they occur.", MessageType.Info);
 
             if (Application.isPlaying)
             {

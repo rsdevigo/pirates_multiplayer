@@ -18,9 +18,6 @@ using UnityEngine;
 
 namespace FishNet.Component.Transforming
 {
-    /// <summary> 
-    /// A somewhat basic but reliable NetworkTransform that will be improved upon greatly after release.
-    /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("FishNet/Component/NetworkTransform")]
     public sealed class NetworkTransform : NetworkBehaviour
@@ -220,7 +217,6 @@ namespace FishNet.Component.Transforming
         public delegate void DataReceivedChanged(TransformData prev, TransformData next);
         /// <summary>
         /// Called when new data is received. Previous and next data are provided. Next data may be manipulated.
-        /// This feature is experimental.
         /// </summary>
         public event DataReceivedChanged OnDataReceived;
         /// <summary>
@@ -448,7 +444,7 @@ namespace FishNet.Component.Transforming
         /// <summary>
         /// Number of intervals remaining before synchronization.
         /// </summary>
-        private byte _intervalsRemaining;
+        private short _intervalsRemaining;
         #endregion
 
         #region Const.
@@ -500,7 +496,24 @@ namespace FishNet.Component.Transforming
                 }
             }
 
-            
+            //PROSTART
+            if (_synchronizeParent)
+            {
+                /* Can send under the following conditions.
+                 *  Client auth and not owner. No need to send parent changes to owner when client auth.
+                 *  
+                 *  Not client auth and send to owner. Everyone will get changes in this scenario.
+                 * 
+                 *  Not client auth, not send to owner, and not owner.
+                 *      This should send to everyone but owner.
+                 */
+                bool canSend = (_clientAuthoritative && connection != base.Owner) ||
+                    (!_clientAuthoritative && _sendToOwner) ||
+                    (!_clientAuthoritative && !_sendToOwner && connection != Owner);
+                if (canSend)
+                    TargetSetParent(connection, _parentBehaviour);
+            }
+            //PROEND
         }
 
         public override void OnStartClient()
@@ -569,36 +582,42 @@ namespace FishNet.Component.Transforming
         /// </summary>
         private void TimeManager_OnPostTick()
         {
-            /* If more than 1 interval is remaining than then means
-             * there are more ticks to be waited upon. */
-            if (_intervalsRemaining > 1)
+            /* Intervals remaining is only used when the interval value
+             * is set higher than 1. An interval of 1 indicates to send
+             * every tick. Only check to wait more ticks if interval
+             * is larger than 1. */
+            if (_interval > 1)
             {
+                /* If intervalsRemaining is unset then that means the transform
+                 * did not change last tick. See if transform changed and if so then
+                 * update remaining to _interval. */
+                if (_intervalsRemaining == -1)
+                {
+                    //Transform didn't change, no reason to start remaining.
+                    if (!transform.hasChanged)
+                        return;
+
+                    _intervalsRemaining = _interval;
+                }
+
+                //If here then intervalsRemaining can be deducted.
                 _intervalsRemaining--;
-                return;
-            }
-            /* If there is 0 or 1 interval remaining then this
-             * tick would be the one to send data and reset the interval. */
-            else
-            {
-                _intervalsRemaining = _interval;
+                //Interval not met yet.
+                if (_intervalsRemaining > 0)
+                    return;
+                //Intervals remainin is met. Reset to -1 to await new change.
+                else
+                    _intervalsRemaining = -1;
             }
 
-            
+            //PROSTART
+            UpdateParentBehaviour();
+            //PROEND
             if (base.IsServer)
                 SendToClients();
             if (base.IsClient)
                 SendToServer();
         }
-
-        /* 
-         * //todo make a special method for handling network transforms that iterates all
-         * of them at once and ALWAYS send the packetId TransformUpdate. This packet will
-         * have the total length of all updates. theres a chance a nob might not exist since
-         * these packets are unreliable and can arrive after a nob destruction. if thats
-         * the case then the packet can still be parsed out and recovered because the updateflags
-         * indicates exactly what data needs to be read.
-         */
-
 
         /// <summary>
         /// Tries to subscribe to TimeManager ticks.
@@ -613,6 +632,52 @@ namespace FishNet.Component.Transforming
                 base.NetworkManager.TimeManager.OnPostTick += TimeManager_OnPostTick;
             else
                 base.NetworkManager.TimeManager.OnPostTick -= TimeManager_OnPostTick;
+        }
+
+        /// <summary>
+        /// Updates the interval value over the network.
+        /// </summary>
+        /// <param name="value">New interval.</param>
+        public void SetInterval(byte value)
+        {
+            bool canSet = (base.IsServer && !_clientAuthoritative)
+                || (base.IsServer && _clientAuthoritative && !base.Owner.IsValid)
+                || (_clientAuthoritative && base.IsOwner);
+
+            if (!canSet)
+                return;
+
+            if (base.IsServer)
+                ObserversSetInterval(value);
+            else
+                ServerSetInterval(value);
+        }
+
+        /// <summary>
+        /// Updates the interval value.
+        /// </summary>
+        /// <param name="value"></param>
+        private void SetIntervalInternal(byte value)
+        {
+            value = (byte)Mathf.Max(value, 1);
+            _interval = value;
+        }
+
+        /// <summary>
+        /// Sets interval over the network.
+        /// </summary>
+        [ServerRpc(RunLocally = true)]
+        private void ServerSetInterval(byte value)
+        {
+            SetIntervalInternal(value);
+        }
+        /// <summary>
+        /// Sets interval over the network.
+        /// </summary>
+        [ObserversRpc(RunLocally = true)]
+        private void ObserversSetInterval(byte value)
+        {
+            SetIntervalInternal(value);
         }
 
 
@@ -939,7 +1004,65 @@ namespace FishNet.Component.Transforming
             }
         }
 
-        
+        //PROSTART
+        /// <summary>
+        /// Updates the ParentBehaviour field when able to.
+        /// </summary>
+        private void UpdateParentBehaviour()
+        {
+            if (!_synchronizeParent)
+                return;
+            /* The field ParentBehaviour is only used by
+             * the sending connection. When moving the ParentBehaviour
+             * is deserialized into the TransformData, meaning the field
+             * varient is never used on connections which do not control
+             * the object. It's probably very similar in performance,
+             * possibly even more efficient to just run the parent change
+             * checks versus checking if those checks can be checked in the
+             * first place. check. */
+
+            Transform parent = transform.parent;
+            //No parent.
+            if (parent == null)
+            {
+                _parentBehaviour = null;
+                _parentTransform = null;
+            }
+            //Has a parent, see if eligible.
+            else
+            {
+                //No change.
+                if (_parentTransform == parent)
+                    return;
+
+                _parentTransform = parent;
+                parent.TryGetComponent<NetworkBehaviour>(out _parentBehaviour);
+                if (_parentBehaviour == null)
+                    LogInvalidParent();
+            }
+        }
+
+        /// <summary>
+        /// Sets the transforms parent if it's changed.
+        /// </summary>
+        /// <param name="parent"></param>
+        private void SetParent(NetworkBehaviour parent, RateData rd)
+        {
+            Transform target = (parent == null) ? null : parent.transform;
+            //Unchanged.
+            if (target == transform.parent)
+                return;
+
+            Vector3 scale = transform.localScale;
+            transform.SetParent(target);
+            transform.localScale = scale;
+
+            /* Set ratedata to immediate so there's no blending between transform values when
+             * getting on or off platforms. */
+            if (rd != null)
+                rd.Update(-1f, -1f, -1f, rd.LastUnalteredPositionRate, rd.TickSpan, rd.AbnormalRateDetected, rd.TimeRemaining);
+        }
+        //PROEND
 
         /// <summary>
         /// Moves to a GoalData. Automatically determins if to use data from server or client.
@@ -972,7 +1095,11 @@ namespace FishNet.Component.Transforming
             TransformData td = _currentGoalData.Transforms;
             RateData rd = _currentGoalData.Rates;
 
-            
+            //PROSTART
+            //Set parent.
+            if (_synchronizeParent)
+                SetParent(td.ParentBehaviour, rd);
+            //PROEND
 
             float multiplier = 1f;
             int queueCount = _goalDataQueue.Count;
@@ -1038,7 +1165,27 @@ namespace FishNet.Component.Transforming
                 //No more in buffer, see if can extrapolate.
                 else
                 {
-                    
+                    //PROSTART
+                    //Can extrapolate.
+                    if (td.ExtrapolationState == TransformData.ExtrapolateState.Available)
+                    {
+                        rd.TimeRemaining = (float)(_extrapolation * base.TimeManager.TickDelta);
+                        td.ExtrapolationState = TransformData.ExtrapolateState.Active;
+                        if (leftOver > 0f)
+                            MoveToTarget(leftOver);
+                    }
+                    //Ran out of extrapolate.
+                    else if (td.ExtrapolationState == TransformData.ExtrapolateState.Active)
+                    {
+                        rd.TimeRemaining = (float)(_extrapolation * base.TimeManager.TickDelta);
+                        td.ExtrapolationState = TransformData.ExtrapolateState.Disabled;
+                        if (leftOver > 0f)
+                            MoveToTarget(leftOver);
+                    }
+                    //Extrapolation has ended or was never enabled.
+                    else
+                    {
+                        //PROEND
                         /* If everything matches up then end queue.
                         * Otherwise let it play out until stuff
                         * aligns. Generally the time remaining is enough
@@ -1047,7 +1194,9 @@ namespace FishNet.Component.Transforming
                         if (!HasChanged(td))
                             _queueReady = false;
                         OnInterpolationComplete?.Invoke();
-                        
+                        //PROSTART
+                    }
+                    //PROEND
                 }
             }
 
@@ -1459,7 +1608,14 @@ namespace FishNet.Component.Transforming
             //Default value.
             next.ExtrapolationState = TransformData.ExtrapolateState.Disabled;
 
-            
+            //PROSTART
+            if (_extrapolation == 0 || !_synchronizePosition || channel == Channel.Reliable || next.Position == prev.Position)
+                return;
+
+            Vector3 offet = (next.Position - prev.Position) * _extrapolation;
+            next.ExtrapolatedPosition = (next.Position + offet);
+            next.ExtrapolationState = TransformData.ExtrapolateState.Available;
+            //PROEND
         }
 
 
@@ -1633,7 +1789,31 @@ namespace FishNet.Component.Transforming
         [TargetRpc]
         private void TargetSetParent(NetworkConnection conn, NetworkBehaviour parent)
         {
-            
+            //PROSTART
+            /* Same checks on sending end, just making sure
+             * something hasn't changed since packet was sent. */
+            if (!_synchronizeParent)
+                return;
+
+            /* Can be received if
+             *  Client auth and not owner. 
+             * 
+             *  Server auth and send to owner, since all clients should get this.
+             *  
+             *  Server auth, dont send to owner, and not owner.
+             */
+            bool canReceive = (_clientAuthoritative && !base.IsOwner) ||
+                (!_clientAuthoritative && _sendToOwner) ||
+                (!_clientAuthoritative && !_sendToOwner && !base.IsOwner);
+
+            if (!canReceive)
+                return;
+
+            _parentBehaviour = parent;
+            _lastReceivedTransformData.ParentBehaviour = parent;
+
+            SetParent(parent, null);
+            //PROEND
         }
 
         /// <summary>
@@ -1667,7 +1847,7 @@ namespace FishNet.Component.Transforming
         }
 
         /// <summary>
-        /// Updates which properties are synchronized. This feature is experimental.
+        /// Updates which properties are synchronized.
         /// </summary>
         /// <param name="value">Properties to synchronize.</param>
         public void SetSynchronizedProperties(SynchronizedProperty value)

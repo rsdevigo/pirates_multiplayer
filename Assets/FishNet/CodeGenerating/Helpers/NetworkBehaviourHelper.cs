@@ -22,7 +22,8 @@ namespace FishNet.CodeGenerating.Helping
         //Names.
         internal string FullName;
         //Prediction.
-        internal MethodReference ClearReplicateCache_MethodRef;
+        internal MethodReference ClearReplicateCache_1P_MethodRef;
+        internal MethodReference ClearReplicateCache_0P_MethodRef;
         internal MethodReference SetLastReconcileTick_MethodRef;
         internal MethodReference SetLastReplicateTick_MethodRef;
         internal MethodReference TransformMayChange_MethodRef;
@@ -49,7 +50,7 @@ namespace FishNet.CodeGenerating.Helping
         internal MethodReference IsHost_MethodRef;
         //Misc.
         internal TypeReference TypeRef;
-        internal MethodReference CompareOwner_MethodRef;
+        internal MethodReference OwnerMatches_MethodRef;
         internal MethodReference LocalConnection_MethodRef;
         internal MethodReference Owner_MethodRef;
         internal MethodReference ReadSyncVar_MethodRef;
@@ -81,40 +82,45 @@ namespace FishNet.CodeGenerating.Helping
             foreach (MethodInfo mi in networkBehaviourType.GetMethods((BindingFlags.Static | BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic)))
             {
                 //CreateDelegates.
-                if (mi.Name == nameof(NetworkBehaviour.RegisterServerRpc))
+                if (mi.Name == nameof(NetworkBehaviour.RegisterServerRpcInternal))
                     RegisterServerRpc_MethodRef = CodegenSession.ImportReference(mi);
-                else if (mi.Name == nameof(NetworkBehaviour.RegisterObserversRpc))
+                else if (mi.Name == nameof(NetworkBehaviour.RegisterObserversRpcInternal))
                     RegisterObserversRpc_MethodRef = CodegenSession.ImportReference(mi);
-                else if (mi.Name == nameof(NetworkBehaviour.RegisterTargetRpc))
+                else if (mi.Name == nameof(NetworkBehaviour.RegisterTargetRpcInternal))
                     RegisterTargetRpc_MethodRef = CodegenSession.ImportReference(mi);
                 //SendPredictions.
-                else if (mi.Name == nameof(NetworkBehaviour.SendReplicateRpc))
+                else if (mi.Name == nameof(NetworkBehaviour.SendReplicateRpcInternal))
                     SendReplicateRpc_MethodRef = CodegenSession.ImportReference(mi);
-                else if (mi.Name == nameof(NetworkBehaviour.SendReconcileRpc))
+                else if (mi.Name == nameof(NetworkBehaviour.SendReconcileRpcInternal))
                     SendReconcileRpc_MethodRef = CodegenSession.ImportReference(mi);
-                else if (mi.Name == nameof(NetworkBehaviour.RegisterReplicateRpc))
+                else if (mi.Name == nameof(NetworkBehaviour.RegisterReplicateRpcInternal))
                     RegisterReplicateRpc_MethodRef = CodegenSession.ImportReference(mi);
-                else if (mi.Name == nameof(NetworkBehaviour.RegisterReconcileRpc))
+                else if (mi.Name == nameof(NetworkBehaviour.RegisterReconcileRpcInternal))
                     RegisterReconcileRpc_MethodRef = CodegenSession.ImportReference(mi);
                 //SendRpcs.
-                else if (mi.Name == nameof(NetworkBehaviour.SendServerRpc))
+                else if (mi.Name == nameof(NetworkBehaviour.SendServerRpcInternal))
                     SendServerRpc_MethodRef = CodegenSession.ImportReference(mi);
-                else if (mi.Name == nameof(NetworkBehaviour.SendObserversRpc))
+                else if (mi.Name == nameof(NetworkBehaviour.SendObserversRpcInternal))
                     SendObserversRpc_MethodRef = CodegenSession.ImportReference(mi);
-                else if (mi.Name == nameof(NetworkBehaviour.SendTargetRpc))
+                else if (mi.Name == nameof(NetworkBehaviour.SendTargetRpcInternal))
                     SendTargetRpc_MethodRef = CodegenSession.ImportReference(mi);
                 //Prediction.
-                else if (mi.Name == nameof(NetworkBehaviour.SetLastReconcileTick))
+                else if (mi.Name == nameof(NetworkBehaviour.SetLastReconcileTickInternal))
                     SetLastReconcileTick_MethodRef = CodegenSession.ImportReference(mi);
                 else if (mi.Name == nameof(NetworkBehaviour.SetLastReplicateTickInternal))
                     SetLastReplicateTick_MethodRef = CodegenSession.ImportReference(mi);
                 else if (mi.Name == nameof(NetworkBehaviour.ClearReplicateCache))
-                    ClearReplicateCache_MethodRef = CodegenSession.ImportReference(mi);
-                //Misc.
+                {
+                    int pLength = mi.GetParameters().Length;
+                    if (pLength == 1)
+                        ClearReplicateCache_1P_MethodRef = CodegenSession.ImportReference(mi);
+                    else if (pLength == 0)
+                        ClearReplicateCache_0P_MethodRef = CodegenSession.ImportReference(mi);
+                }                //Misc.
                 else if (mi.Name == nameof(NetworkBehaviour.TransformMayChange))
                     TransformMayChange_MethodRef = CodegenSession.ImportReference(mi);
-                else if (mi.Name == nameof(NetworkBehaviour.CompareOwner))
-                    CompareOwner_MethodRef = CodegenSession.ImportReference(mi);
+                else if (mi.Name == nameof(NetworkBehaviour.OwnerMatches))
+                    OwnerMatches_MethodRef = CodegenSession.ImportReference(mi);
                 else if (mi.Name == nameof(NetworkBehaviour.ReadSyncVar))
                     ReadSyncVar_MethodRef = CodegenSession.ImportReference(mi);
                 else if (mi.Name == nameof(NetworkBehaviour.DirtySyncType))
@@ -196,7 +202,21 @@ namespace FishNet.CodeGenerating.Helping
         /// <param name="rpcType"></param>
         internal void CreateRpcDelegate(bool runLocally, TypeDefinition typeDef, MethodDefinition readerMethodDef, RpcType rpcType, uint methodHash, CustomAttribute rpcAttribute)
         {
-            
+            //PROSTART            
+            if (CodeStripping.StripBuild)
+            {
+                /* Clients do not need to register serverRpcs since they won't
+                 * get them, just as server doesn't need to register client rpcs. */
+                bool isServerRpc = (rpcType == RpcType.Server);
+                if (
+                    (isServerRpc && CodeStripping.ReleasingForClient) ||
+                       (!isServerRpc && CodeStripping.ReleasingForServer)
+                    )
+                {
+                    return;
+                }
+            }
+            //PROEND
 
             MethodDefinition methodDef = typeDef.GetMethod(NetworkBehaviourProcessor.NETWORKINITIALIZE_EARLY_INTERNAL_NAME);
             ILProcessor processor = methodDef.Body.GetILProcessor();
@@ -300,7 +320,7 @@ namespace FishNet.CodeGenerating.Helping
             processor.Emit(OpCodes.Ldarg_0); //argument: this
             //If !base.IsOwner endIf.
             processor.Emit(OpCodes.Ldarg, connectionParameterDef);
-            processor.Emit(OpCodes.Call, CompareOwner_MethodRef);
+            processor.Emit(OpCodes.Call, OwnerMatches_MethodRef);
             processor.Emit(OpCodes.Brtrue, endIf);
             //Return block.
             Instruction retInst = processor.Create(OpCodes.Ret);
