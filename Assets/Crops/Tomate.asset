@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc722197ed4f51241a27f4669d9a819a, type: 3}
+  m_Name: Tomate
+  m_EditorClassIdentifier: 
+  cropName: Tomate
+  stage: 0
+  interval: 5
+  lastInterval: -0.002275123
+  cropsSprites:
+  - {fileID: 21300000, guid: ff5374111fa9aad45a1d0902f69c43cf, type: 3}
+  - {fileID: 21300000, guid: 2344547979167b949979464cc77c6806, type: 3}
+  - {fileID: 21300000, guid: ea8789a439028724fb224a59975c8f1e, type: 3}
+  - {fileID: 21300000, guid: 9d848193b705e054ca7910dfbd6dbba1, type: 3}
+  - {fileID: 21300000, guid: 448c371f91724d24c81c4e7ebcf3c617, type: 3}
