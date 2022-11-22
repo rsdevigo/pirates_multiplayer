@@ -57,7 +57,7 @@ namespace FishNet.Component.Transforming.Editing
 
             //PROSTART
             if (1 == 1)
-            { 
+            {
                 EditorGUILayout.HelpBox(EditingConstants.PRO_ASSETS_UNLOCKED_TEXT, MessageType.None);
             }
             else

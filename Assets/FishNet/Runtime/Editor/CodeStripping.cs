@@ -128,7 +128,7 @@ namespace FishNet.Configuring
             Configuration.ConfigurationData.IsBuilding = true;
 
             BuildOptions options = report.summary.options;
-#if UNITY_2021_2_OR_NEWER && !UNITY_ANDROID && !UNITY_IPHONE && !UNITY_WEBGL
+#if UNITY_2021_2_OR_NEWER && !UNITY_ANDROID && !UNITY_IPHONE && !UNITY_WEBGL && !UNITY_WSA
             Configuration.ConfigurationData.IsHeadless = (report.summary.GetSubtarget<StandaloneBuildSubtarget>() == StandaloneBuildSubtarget.Server);
 #else
             Configuration.ConfigurationData.IsHeadless = options.HasFlag(BuildOptions.EnableHeadlessMode);
@@ -182,6 +182,6 @@ namespace FishNet.Configuring
                 BuildingEnded();
         }
 #endif
-        }
+    }
 
 }

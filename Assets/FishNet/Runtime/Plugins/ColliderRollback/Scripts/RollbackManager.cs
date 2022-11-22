@@ -2,7 +2,6 @@
 using FishNet.Managing.Timing;
 using FishNet.Transporting;
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace FishNet.Component.ColliderRollback
@@ -141,8 +140,9 @@ namespace FishNet.Component.ColliderRollback
         /// <summary>
         /// Rolls back colliders based on a fixed frame.
         /// </summary>
-        /// <param name="fixedFrame"></param>
-        /// <param name="physicsType"></param>
+        /// <param name="pt">Precise tick received from the client.</param>
+        /// <param name="physicsType">Type of physics to rollback; this is often what your casts will use.</param>
+        /// <param name="asOwner">True if IsOwner of the object. This can be ignored and only provides more accurate results for clientHost.</param>
         public void Rollback(PreciseTick pt, PhysicsType physicsType, bool asOwner = false)
         {
             if (_networkManager == null)

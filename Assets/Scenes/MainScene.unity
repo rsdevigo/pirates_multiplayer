@@ -2766,9 +2766,9 @@ MonoBehaviour:
   _updateOrder: 0
   _allowTickDropping: 0
   _maximumFrameTicks: 3
-  _tickRate: 144
+  _tickRate: 240
   _pingInterval: 1
-  _timingInterval: 2
+  _timingInterval: 1
   _physicsMode: 1
 --- !u!1 &619394800
 GameObject:
