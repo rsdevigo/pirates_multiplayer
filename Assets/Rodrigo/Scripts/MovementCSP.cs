@@ -24,7 +24,7 @@ public class MovementCSP : NetworkBehaviour
     if (base.TimeManager != null)
     {
       base.TimeManager.OnTick -= TimeManager_OnTick;
-      base.TimeManager.OnPostTick += TimeManager_OnPostTick;
+      base.TimeManager.OnPostTick -= TimeManager_OnPostTick;
     }
   }
 
@@ -69,9 +69,15 @@ public class MovementCSP : NetworkBehaviour
   [Replicate]
   private void ExecuteAction(MovementCSPData data, bool asServer, bool replaying = false)
   {
-    //Vector2 targetVelocity = new Vector2(data.direction.x * moveSpeed, rb.velocity.y);
-    rb.AddForce(new Vector2(data.direction.x * moveSpeed, Physics.gravity.y));
-    //rb.velocity = Vector2.SmoothDamp(rb.velocity, targetVelocity, ref m_Velocity, 0.05f);
+    if (!GetComponent<DashRPC>().isDashing)
+    {
+      // Vector2 targetVelocity = new Vector2(data.direction.x * moveSpeed * (float)TimeManager.TickDelta * 10f, rb.velocity.y);
+      // rb.velocity = targetVelocity;//Vector2.SmoothDamp(rb.velocity, targetVelocity, ref m_Velocity, 0.05f);
+      rb.AddForce(new Vector2(data.direction.x * moveSpeed, Physics.gravity.y));
+    }
+
+
+
   }
 
   [Reconcile]
@@ -93,7 +99,7 @@ public struct MovementCSPRecoil
   public Vector2 velocity;
   public float angularVelocity;
   public Vector3 position;
-  public MovementCSPRecoil (Vector2 vel, float aVel, Vector3 pos)
+  public MovementCSPRecoil(Vector2 vel, float aVel, Vector3 pos)
   {
     velocity = vel;
     angularVelocity = aVel;
