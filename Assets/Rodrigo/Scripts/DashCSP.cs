@@ -89,7 +89,7 @@ public class DashCSP : NetworkBehaviour
     {
         if (base.IsServer)
         {
-            DashCSPRecoil rd = new DashCSPRecoil(rb.velocity, rb.angularVelocity, rb.gravityScale, transform.position, isDashing);
+            DashCSPRecoil rd = new DashCSPRecoil(rb.velocity, rb.angularVelocity, rb.gravityScale, rb.position, isDashing);
             Reconciliation(rd, true);
         }
     }
@@ -144,6 +144,10 @@ public class DashCSP : NetworkBehaviour
         rb.velocity = data.velocity;
         rb.angularVelocity = data.angularVelocity;
         rb.gravityScale = data.gravityScale;
+        if (transform.position != data.position)
+        {
+            Debug.Log($"** Miss Position: {transform.position.ToString("F6")}, {data.position.ToString("F6")}");
+        }
         transform.position = data.position;
     }
 }
