@@ -99,7 +99,6 @@ public class DashRPC : NetworkBehaviour
     if (_dashTimer.Remaining <= 0f && isDashing)
     {
       StopDash();
-
     }
     if (data.dash && _dashCooldownTimer.Remaining <= 0f)
     {

@@ -90,7 +90,6 @@ MonoBehaviour:
   - {fileID: 7068521730148464765}
   - {fileID: 6263324761715425552}
   - {fileID: 5272648903393305794}
-  - {fileID: 0}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   _isNetworked: 1
@@ -119,7 +118,7 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 7068521730148464706}
   _networkObjectCache: {fileID: 7068521730148464706}
   _graphicalObject: {fileID: 7068521730312618704}
-  _enableTeleport: 1
+  _enableTeleport: 0
   _teleportThreshold: 1
   _ownerInterpolation: 0
   _predictionType: 2

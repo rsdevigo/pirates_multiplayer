@@ -11,6 +11,7 @@ public class MovementCSP : NetworkBehaviour
   [SerializeField]
   private float moveSpeed = 15f;
   private Vector2 m_Velocity;
+  private MovementCSPData _clientData;
   public override void OnStartNetwork()
   {
     base.OnStartNetwork();
@@ -61,7 +62,7 @@ public class MovementCSP : NetworkBehaviour
   {
     if (base.IsServer)
     {
-      MovementCSPRecoil rd = new MovementCSPRecoil(rb.velocity, rb.angularVelocity, rb.position);
+      MovementCSPRecoil rd = new MovementCSPRecoil(rb.velocity, rb.angularVelocity, transform.position);
       Reconciliation(rd, true);
     }
   }
@@ -69,28 +70,21 @@ public class MovementCSP : NetworkBehaviour
   [Replicate]
   private void ExecuteAction(MovementCSPData data, bool asServer, bool replaying = false)
   {
+    rb.AddForce(new Vector2(data.direction.x * moveSpeed, Physics2D.gravity.y));
     // if (!GetComponent<DashCSP>().isDashing)
     // {
-    // Vector2 targetVelocity = new Vector2(data.direction.x * moveSpeed * (float)TimeManager.TickDelta * 10f, rb.velocity.y);
-    // rb.velocity = targetVelocity;//Vector2.SmoothDamp(rb.velocity, targetVelocity, ref m_Velocity, 0.05f);
-    rb.AddForce(new Vector2(data.direction.x * moveSpeed, Physics.gravity.y));
+
+    
     //}
-
-
-
   }
 
   [Reconcile]
   private void Reconciliation(MovementCSPRecoil data, bool asServer)
   {
     rb.velocity = data.velocity;
-    if (transform.position != data.position)
-    {
-      Debug.Log($"** Miss Position: {transform.position.ToString("F6")}, {data.position.ToString("F6")}");
-    }
     transform.position = data.position;
     rb.angularVelocity = data.angularVelocity;
-    
+
   }
 }
 

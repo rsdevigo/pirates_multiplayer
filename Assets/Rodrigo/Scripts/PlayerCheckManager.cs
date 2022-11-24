@@ -17,7 +17,7 @@ public class PlayerCheckManager : NetworkBehaviour
   public override void OnStartNetwork()
   {
     base.OnStartNetwork();
-    base.TimeManager.OnTick += TimeManager_OnUpdate;
+    base.TimeManager.OnTick += TimeManager_OnTick;
   }
 
   public override void OnStopNetwork()
@@ -25,11 +25,11 @@ public class PlayerCheckManager : NetworkBehaviour
     base.OnStopNetwork();
     if (base.TimeManager != null)
     {
-      base.TimeManager.OnTick -= TimeManager_OnUpdate;
+      base.TimeManager.OnTick -= TimeManager_OnTick;
     }
   }
 
-  public void TimeManager_OnUpdate()
+  public void TimeManager_OnTick()
   {
     isGrounded = Physics2D.OverlapCircle(groundCheckTransform.position, groundRadius, groundLayerMask);
   }
